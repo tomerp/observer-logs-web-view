@@ -7,9 +7,22 @@ This runs alongside your observer on the same machine and reads logs via Docker.
 - The service user must be in the `docker` group (or run with sudo)
 
 ### 2) Install
+Clone from GitHub (choose SSH or HTTPS):
+
+SSH (recommended):
 ```bash
 cd ~/flare-systems-deployment
-git clone (or copy) observer-logs-web-view
+git clone git@github.com:tomerp/observer-logs-web-view.git
+cd observer-logs-web-view
+nvm use 18
+npm ci
+npm run build
+```
+
+HTTPS:
+```bash
+cd ~/flare-systems-deployment
+git clone https://github.com/tomerp/observer-logs-web-view.git
 cd observer-logs-web-view
 nvm use 18
 npm ci
