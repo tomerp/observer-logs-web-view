@@ -40,8 +40,9 @@ export function parseLine(rawLine: string): LogEvent {
   const cleaned = trimmed.replace(/\x1b\[[0-9;]*m/g, '');
   const parts = cleaned.split('\t');
   // Timestamp in first field like "2025-10-22 07:33:49,598"
-  const tsIso = parts[0]?.replace(',', '.').replace(' ', 'T') + 'Z';
-  const date = new Date(tsIso);
+  // Interpret as LOCAL server time (no Z) to avoid timezone skew
+  const tsLocal = parts[0]?.replace(',', '.').replace(' ', 'T');
+  const date = new Date(tsLocal);
   const ts = isNaN(date.getTime()) ? Date.now() : date.getTime();
   const level = detectLevel(parts);
   const message = parts.slice(3).join('\t') || parts.slice(2).join('\t') || cleaned;

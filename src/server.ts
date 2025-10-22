@@ -96,6 +96,11 @@ export function createServer() {
       }
     }
     ws.send(JSON.stringify({ type: 'hello', data: { version: 1, now: Date.now() } }));
+    // Keep-alive ping to prevent intermediaries from closing idle connections
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === 1) { try { ws.ping(); } catch {} }
+    }, 25000);
+    ws.on('close', () => clearInterval(pingInterval));
   });
 
   follower.start();

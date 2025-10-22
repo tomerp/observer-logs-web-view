@@ -110,6 +110,11 @@
       };
 
       hydrateRecent().then(connect);
+      // UI connection status text already updates, but make it sticky
+      setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) statusEl.textContent = 'connected';
+        else statusEl.textContent = 'disconnected';
+      }, 5000);
     </script>
   </body>
   </html>
