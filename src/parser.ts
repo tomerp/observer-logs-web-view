@@ -1,4 +1,5 @@
 import { LogEvent, LogLevel, ParsedFields } from './types';
+import { CONFIG } from './config';
 
 const LEVELS: LogLevel[] = ['INFO', 'WARNING', 'ERROR', 'CRITICAL', 'UNKNOWN'];
 
@@ -40,9 +41,10 @@ export function parseLine(rawLine: string): LogEvent {
   const cleaned = trimmed.replace(/\x1b\[[0-9;]*m/g, '');
   const parts = cleaned.split('\t');
   // Timestamp in first field like "2025-10-22 07:33:49,598"
-  // Interpret as LOCAL server time (no Z) to avoid timezone skew
-  const tsLocal = parts[0]?.replace(',', '.').replace(' ', 'T');
-  const date = new Date(tsLocal);
+  const base = parts[0]?.replace(',', '.').replace(' ', 'T');
+  // If logs are UTC, add Z; else treat as local
+  const iso = CONFIG.logTsIsUTC ? `${base}Z` : base;
+  const date = new Date(iso);
   const ts = isNaN(date.getTime()) ? Date.now() : date.getTime();
   const level = detectLevel(parts);
   const message = parts.slice(3).join('\t') || parts.slice(2).join('\t') || cleaned;

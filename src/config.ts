@@ -9,6 +9,7 @@ export const CONFIG = {
   statsPushIntervalMs: Number(process.env.STATS_PUSH_INTERVAL_MS || 5000),
   dockerSince: process.env.DOCKER_SINCE || '1h',
   dockerUseSudo: process.env.DOCKER_USE_SUDO === '1' || process.env.DOCKER_USE_SUDO === 'true',
+  logTsIsUTC: process.env.LOG_TS_IS_UTC === '1' || process.env.LOG_TS_IS_UTC === 'true',
   source: (process.env.SOURCE || 'docker').toLowerCase(), // 'docker' | 'file'
   logFile: process.env.LOG_FILE || '',
   tailInitialLines: Number(process.env.TAIL_N || 2000),

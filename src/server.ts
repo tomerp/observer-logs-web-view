@@ -116,7 +116,7 @@ export function createServer() {
     // Keep-alive ping to prevent intermediaries from closing idle connections
     const pingInterval = setInterval(() => {
       if (ws.readyState === 1) { try { ws.ping(); } catch {} }
-    }, 25000);
+    }, 20000);
     ws.on('close', () => clearInterval(pingInterval));
   });
 
