@@ -22,6 +22,7 @@ npm run build
 export SOURCE=docker
 export CONTAINER_NAME=ftso-v2-deployment-fdc-observer-1
 export DOCKER_SINCE=1h
+export DOCKER_USE_SUDO=1   # if your user isn't in the docker group
 export TOKEN=<shared_token>
 export PORT=43117
 export HOST=0.0.0.0
@@ -30,6 +31,11 @@ npm start
 ```
 
 Open the browser: `http://<server-ip>:43117` and enter the token.
+
+Health and APIs:
+- `GET /health` → `{ ok: true }`
+- `GET /recent?limit=5000&since=<iso>` (token required)
+- `GET /metrics` (token required)
 
 ### 4) Make it a systemd service
 Create `/etc/systemd/system/observer-logs-web-view.service`:
@@ -47,6 +53,7 @@ Environment=NODE_ENV=production
 Environment=SOURCE=docker
 Environment=CONTAINER_NAME=ftso-v2-deployment-fdc-observer-1
 Environment=DOCKER_SINCE=1h
+Environment=DOCKER_USE_SUDO=1
 Environment=TOKEN=<shared_token>
 Environment=PORT=43117
 Environment=HOST=0.0.0.0

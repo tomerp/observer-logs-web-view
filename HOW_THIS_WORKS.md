@@ -23,6 +23,7 @@ The service exposes a WebSocket and REST API. It seeds recent history once, then
   - Broadcasts `line` and periodic `stats` to all WS clients.
   - Token auth via `Authorization: Bearer <TOKEN>` or `?token=`.
   - Serves the minimal UI at `/`.
+  - REST endpoints: `/api/v1/*` plus short aliases `/health`, `/recent`, `/metrics`.
 
 ### Message formats
 - WS `hello`: `{ type: 'hello', data: { version: 1, now } }`
@@ -34,6 +35,8 @@ The service exposes a WebSocket and REST API. It seeds recent history once, then
 - Seed events set `seed: true`; the UI avoids autoscroll during seed to prevent jumpiness.
 - Backpressure: clients receive messages best-effort; if a client is slow, messages may be dropped by the browser. Server sends small JSON frames.
 - Memory: all data is in-memory; restart clears buffers and stats.
+- WS keep-alive pings (25s) reduce idle disconnects.
+- Timestamps are parsed as server-local to avoid timezone skew in metrics.
 
 ### Extensibility
 - Add new analytics by updating `stats.ts` and sending extra fields in `StatsSnapshot`.

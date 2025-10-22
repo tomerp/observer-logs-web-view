@@ -62,6 +62,8 @@ export function createServer() {
 
   // REST endpoints
   app.get('/api/v1/health', (_req: Request, res: Response) => res.json({ ok: true }));
+  // Aliases for convenience
+  app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
   app.get('/api/v1/recent', authMiddleware, (req: Request, res: Response) => {
     const { limit, since } = req.query as { limit?: string; since?: string };
@@ -74,8 +76,23 @@ export function createServer() {
     if (events.length > lim) events = events.slice(events.length - lim);
     res.json({ events });
   });
+  app.get('/recent', authMiddleware, (req: Request, res: Response) => {
+    const { limit, since } = req.query as { limit?: string; since?: string };
+    let events = buffer.toArray();
+    if (since) {
+      const ts = Date.parse(since);
+      if (!isNaN(ts)) events = events.filter((e) => e.ts >= ts);
+    }
+    const lim = Math.min(Number(limit || CONFIG.recentLimit), CONFIG.recentLimit);
+    if (events.length > lim) events = events.slice(events.length - lim);
+    res.json({ events });
+  });
 
   app.get('/api/v1/metrics', authMiddleware, (_req: Request, res: Response) => {
+    const snap = stats.snapshot(Date.now());
+    res.json(snap);
+  });
+  app.get('/metrics', authMiddleware, (_req: Request, res: Response) => {
     const snap = stats.snapshot(Date.now());
     res.json(snap);
   });
