@@ -42,9 +42,11 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
 
   private launch() {
     const args = ['logs', '-f', '--tail=0', CONFIG.containerName];
-    this.child = spawn('docker', args); // default stdio gives non-null stdout/stderr
+    const cmd = CONFIG.dockerUseSudo ? 'sudo' : 'docker';
+    const spawnArgs = CONFIG.dockerUseSudo ? ['docker', ...args] : args;
+    this.child = spawn(cmd, spawnArgs); // default stdio gives non-null stdout/stderr
     const cp = this.child;
-    this.emit('notice', `spawned: docker ${args.join(' ')}`);
+    this.emit('notice', `spawned: ${cmd} ${spawnArgs.join(' ')}`);
 
     let stdoutBuffer = '';
     cp.stdout.on('data', (chunk: Buffer) => {
@@ -84,7 +86,9 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
   private async seedOnce(): Promise<void> {
     return new Promise((resolve) => {
       const args = ['logs', `--since=${CONFIG.dockerSince}`, CONFIG.containerName];
-      const seedProc = spawn('docker', args);
+      const cmd = CONFIG.dockerUseSudo ? 'sudo' : 'docker';
+      const spawnArgs = CONFIG.dockerUseSudo ? ['docker', ...args] : args;
+      const seedProc = spawn(cmd, spawnArgs);
       let stdoutBuffer = '';
       seedProc.stdout.on('data', (chunk: Buffer) => {
         stdoutBuffer += chunk.toString('utf8');
