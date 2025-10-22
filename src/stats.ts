@@ -14,8 +14,15 @@ export class RollingStats {
       bucket = { minute, WARNING: 0, ERROR: 0, CRITICAL: 0 };
       this.buckets.set(minute, bucket);
     }
+    // Count warnings/errors/criticals both from level field and from message hints when level is UNKNOWN
+    const increment = (lvl: 'WARNING' | 'ERROR' | 'CRITICAL') => { bucket![lvl]++; };
     if (event.level === 'WARNING' || event.level === 'ERROR' || event.level === 'CRITICAL') {
-      bucket[event.level]++;
+      increment(event.level);
+    } else if (event.level === 'UNKNOWN') {
+      const rawUpper = event.raw.toUpperCase();
+      if (rawUpper.includes('\tWARNING\t') || rawUpper.includes(' WARNING ')) increment('WARNING');
+      if (rawUpper.includes('\tERROR\t') || rawUpper.includes(' ERROR ')) increment('ERROR');
+      if (rawUpper.includes('\tCRITICAL\t') || rawUpper.includes(' CRITICAL ')) increment('CRITICAL');
     }
     if (event.parsed.round) {
       this.lastRound = event.parsed.round;

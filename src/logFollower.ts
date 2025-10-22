@@ -48,27 +48,29 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
     const cp = this.child;
     this.emit('notice', `spawned: ${cmd} ${spawnArgs.join(' ')}`);
 
-    let stdoutBuffer = '';
-    cp.stdout.on('data', (chunk: Buffer) => {
-      stdoutBuffer += chunk.toString('utf8');
+    const processStream = (chunk: Buffer, label: 'stdout' | 'stderr') => {
+      let buf = label === 'stdout' ? stdoutBuffer : stderrBuffer;
+      buf += chunk.toString('utf8');
       let idx: number;
-      while ((idx = stdoutBuffer.indexOf('\n')) >= 0) {
-        const line = stdoutBuffer.slice(0, idx);
-        stdoutBuffer = stdoutBuffer.slice(idx + 1);
-        if (line.trim().length === 0) continue;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx);
+        buf = buf.slice(idx + 1);
+        const trimmed = line.trim();
+        if (trimmed.length === 0) continue;
         try {
-          const evt = parseLine(line);
+          const evt = parseLine(trimmed);
           this.emit('event', evt);
         } catch (e: any) {
           this.emit('error', e);
         }
       }
-    });
+      if (label === 'stdout') stdoutBuffer = buf; else stderrBuffer = buf;
+    };
 
-    cp.stderr.on('data', (chunk: Buffer) => {
-      const msg = chunk.toString('utf8');
-      this.emit('notice', `docker stderr: ${msg.trim()}`);
-    });
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
+    cp.stdout.on('data', (chunk: Buffer) => processStream(chunk, 'stdout'));
+    cp.stderr.on('data', (chunk: Buffer) => processStream(chunk, 'stderr'));
 
     cp.on('exit', (code: number | null, signal: NodeJS.Signals | null) => {
       this.emit('notice', `docker logs exited code=${code} signal=${signal}`);

@@ -36,19 +36,21 @@ function parseFields(message: string): ParsedFields {
 
 export function parseLine(rawLine: string): LogEvent {
   const trimmed = rawLine.replace(/[\r\n]+$/, '');
-  const parts = trimmed.split('\t');
+  // Normalize any color codes / ANSI sequences that might appear from docker TTY
+  const cleaned = trimmed.replace(/\x1b\[[0-9;]*m/g, '');
+  const parts = cleaned.split('\t');
   // Timestamp in first field like "2025-10-22 07:33:49,598"
   const tsIso = parts[0]?.replace(',', '.').replace(' ', 'T') + 'Z';
   const date = new Date(tsIso);
   const ts = isNaN(date.getTime()) ? Date.now() : date.getTime();
   const level = detectLevel(parts);
-  const message = parts.slice(3).join('\t') || parts.slice(2).join('\t') || trimmed;
+  const message = parts.slice(3).join('\t') || parts.slice(2).join('\t') || cleaned;
   const parsed = parseFields(message);
   return {
     ts,
     isoTs: new Date(ts).toISOString(),
     level,
-    raw: trimmed,
+    raw: cleaned,
     parsed,
   };
 }
