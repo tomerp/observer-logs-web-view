@@ -83,23 +83,37 @@ export function createServer() {
   app.get('/api/v1/recent', authMiddleware, (req: Request, res: Response) => {
     const { limit, since } = req.query as { limit?: string; since?: string };
     let events = buffer.toArray();
+    const preCount = events.length;
     if (since) {
       const ts = Date.parse(since);
       if (!isNaN(ts)) events = events.filter((e) => e.ts >= ts);
     }
     const lim = Math.min(Number(limit || CONFIG.recentLimit), CONFIG.recentLimit);
     if (events.length > lim) events = events.slice(events.length - lim);
+    if (CONFIG.verbose) {
+      const first = events[0]?.isoTs;
+      const last = events[events.length - 1]?.isoTs;
+      // eslint-disable-next-line no-console
+      console.log(`[RECENT] pre=${preCount} filtered=${events.length} limit=${lim} since=${since || 'none'} first=${first || '-'} last=${last || '-'}`);
+    }
     res.json({ events });
   });
   app.get('/recent', authMiddleware, (req: Request, res: Response) => {
     const { limit, since } = req.query as { limit?: string; since?: string };
     let events = buffer.toArray();
+    const preCount = events.length;
     if (since) {
       const ts = Date.parse(since);
       if (!isNaN(ts)) events = events.filter((e) => e.ts >= ts);
     }
     const lim = Math.min(Number(limit || CONFIG.recentLimit), CONFIG.recentLimit);
     if (events.length > lim) events = events.slice(events.length - lim);
+    if (CONFIG.verbose) {
+      const first = events[0]?.isoTs;
+      const last = events[events.length - 1]?.isoTs;
+      // eslint-disable-next-line no-console
+      console.log(`[RECENT] pre=${preCount} filtered=${events.length} limit=${lim} since=${since || 'none'} first=${first || '-'} last=${last || '-'}`);
+    }
     res.json({ events });
   });
 
@@ -110,6 +124,17 @@ export function createServer() {
   app.get('/metrics', authMiddleware, (_req: Request, res: Response) => {
     const snap = stats.snapshot(Date.now());
     res.json(snap);
+  });
+
+  // Debug endpoint
+  app.get('/debug', authMiddleware, (_req: Request, res: Response) => {
+    const events = buffer.toArray();
+    const info = {
+      bufferSize: events.length,
+      first: events[0]?.isoTs,
+      last: events[events.length - 1]?.isoTs,
+    };
+    res.json(info);
   });
 
   // Static minimal UI
