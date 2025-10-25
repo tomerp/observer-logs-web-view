@@ -13,6 +13,7 @@ export const CONFIG = {
   source: (process.env.SOURCE || 'docker').toLowerCase(), // 'docker' | 'file'
   logFile: process.env.LOG_FILE || '',
   tailInitialLines: Number(process.env.TAIL_N || 2000),
+  verbose: process.env.VERBOSE === '1' || process.env.VERBOSE === 'true',
 };
 
 export function requireToken(): string {

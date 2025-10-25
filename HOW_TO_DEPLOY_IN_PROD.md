@@ -26,6 +26,7 @@ export DOCKER_USE_SUDO=1   # if your user isn't in the docker group
 export TOKEN=<shared_token>
 export PORT=43117
 export HOST=0.0.0.0
+export VERBOSE=1
 
 npm start
 ```
@@ -57,6 +58,7 @@ Environment=DOCKER_USE_SUDO=1
 Environment=TOKEN=<shared_token>
 Environment=PORT=43117
 Environment=HOST=0.0.0.0
+Environment=VERBOSE=1
 ExecStart=/home/<your-user>/.nvm/versions/node/v18.20.2/bin/node dist/index.js
 Restart=always
 RestartSec=3

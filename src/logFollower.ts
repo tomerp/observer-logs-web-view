@@ -47,6 +47,10 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
     this.child = spawn(cmd, spawnArgs); // default stdio gives non-null stdout/stderr
     const cp = this.child;
     this.emit('notice', `spawned: ${cmd} ${spawnArgs.join(' ')}`);
+    if (CONFIG.verbose) {
+      // eslint-disable-next-line no-console
+      console.log(`[SPAWN] ${cmd} ${spawnArgs.join(' ')}`);
+    }
 
     const processStream = (chunk: Buffer, label: 'stdout' | 'stderr') => {
       let buf = label === 'stdout' ? stdoutBuffer : stderrBuffer;
@@ -74,6 +78,10 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
 
     cp.on('exit', (code: number | null, signal: NodeJS.Signals | null) => {
       this.emit('notice', `docker logs exited code=${code} signal=${signal}`);
+      if (CONFIG.verbose) {
+        // eslint-disable-next-line no-console
+        console.log(`[EXIT] code=${code} signal=${signal}`);
+      }
       if (!this.restarting) {
         this.restarting = true;
         setTimeout(() => {

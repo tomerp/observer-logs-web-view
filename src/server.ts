@@ -16,6 +16,13 @@ export function createServer() {
   app.disable('x-powered-by');
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: CONFIG.corsOrigin === '*' ? true : CONFIG.corsOrigin }));
+  if (CONFIG.verbose) {
+    app.use((req, _res, next) => {
+      // eslint-disable-next-line no-console
+      console.log(`[REQ] ${req.method} ${req.originalUrl}`);
+      next();
+    });
+  }
 
   function authMiddleware(req: Request, res: Response, next: NextFunction) {
     if (!CONFIG.token) return next();
@@ -42,11 +49,19 @@ export function createServer() {
         try { client.send(payload); } catch {}
       }
     }
+    if (CONFIG.verbose && !evt.seed) {
+      // eslint-disable-next-line no-console
+      console.log(`[LINE] ${evt.raw}`);
+    }
   });
   follower.on('notice', (msg: string) => {
     const payload = JSON.stringify({ type: 'notice', data: { msg, ts: Date.now() } });
     for (const client of wss.clients) {
       if (client.readyState === 1) { try { client.send(payload); } catch {} }
+    }
+    if (CONFIG.verbose) {
+      // eslint-disable-next-line no-console
+      console.log(`[NOTICE] ${msg}`);
     }
   });
 
