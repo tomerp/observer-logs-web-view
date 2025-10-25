@@ -56,6 +56,7 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
       let buf = label === 'stdout' ? stdoutBuffer : stderrBuffer;
       buf += chunk.toString('utf8');
       let idx: number;
+      let processed = 0;
       while ((idx = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, idx);
         buf = buf.slice(idx + 1);
@@ -64,11 +65,16 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
         try {
           const evt = parseLine(trimmed);
           this.emit('event', evt);
+          processed++;
         } catch (e: any) {
           this.emit('error', e);
         }
       }
       if (label === 'stdout') stdoutBuffer = buf; else stderrBuffer = buf;
+      if (CONFIG.verbose && processed > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`[STREAM ${label}] processed=${processed} remainingBytes=${Buffer.byteLength(buf, 'utf8')}`);
+      }
     };
 
     let stdoutBuffer = '';
@@ -108,9 +114,13 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
       const cmd = CONFIG.dockerUseSudo ? 'sudo' : 'docker';
       const spawnArgs = CONFIG.dockerUseSudo ? ['docker', ...args] : args;
       const seedProc = spawn(cmd, spawnArgs);
+      if (CONFIG.verbose) {
+        // eslint-disable-next-line no-console
+        console.log(`[SEED] ${cmd} ${spawnArgs.join(' ')}`);
+      }
       let stdoutBuffer = '';
-      seedProc.stdout.on('data', (chunk: Buffer) => {
-        stdoutBuffer += chunk.toString('utf8');
+      let count = 0;
+      const flush = (final: boolean) => {
         let idx: number;
         while ((idx = stdoutBuffer.indexOf('\n')) >= 0) {
           const line = stdoutBuffer.slice(0, idx);
@@ -120,13 +130,43 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
             const evt = parseLine(line);
             evt.seed = true;
             this.emit('event', evt);
+            count++;
           } catch (e: any) {
             this.emit('error', e);
           }
         }
+        if (CONFIG.verbose && (final || count % 1000 === 0)) {
+          // eslint-disable-next-line no-console
+          console.log(`[SEED] emitted=${count} final=${final}`);
+        }
+      };
+      seedProc.stdout.on('data', (chunk: Buffer) => {
+        stdoutBuffer += chunk.toString('utf8');
+        flush(false);
       });
-      seedProc.on('exit', () => resolve());
-      seedProc.on('error', () => resolve());
+      seedProc.stderr.on('data', (chunk: Buffer) => {
+        const msg = chunk.toString('utf8').trim();
+        this.emit('notice', `docker seed stderr: ${msg}`);
+        if (CONFIG.verbose) {
+          // eslint-disable-next-line no-console
+          console.log(`[SEED-STDERR] ${msg}`);
+        }
+      });
+      seedProc.on('exit', (code) => {
+        flush(true);
+        if (CONFIG.verbose) {
+          // eslint-disable-next-line no-console
+          console.log(`[SEED] exit code=${code} total=${count}`);
+        }
+        resolve();
+      });
+      seedProc.on('error', (err) => {
+        if (CONFIG.verbose) {
+          // eslint-disable-next-line no-console
+          console.log(`[SEED] error ${err.message}`);
+        }
+        resolve();
+      });
     });
   }
 }
