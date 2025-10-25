@@ -119,41 +119,43 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
         console.log(`[SEED] ${cmd} ${spawnArgs.join(' ')}`);
       }
       let stdoutBuffer = '';
+      let stderrBuffer = '';
       let count = 0;
-      const flush = (final: boolean) => {
+      const flush = (which: 'stdout' | 'stderr', final: boolean) => {
+        let buf = which === 'stdout' ? stdoutBuffer : stderrBuffer;
         let idx: number;
-        while ((idx = stdoutBuffer.indexOf('\n')) >= 0) {
-          const line = stdoutBuffer.slice(0, idx);
-          stdoutBuffer = stdoutBuffer.slice(idx + 1);
+        let processed = 0;
+        while ((idx = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, idx);
+          buf = buf.slice(idx + 1);
           if (line.trim().length === 0) continue;
           try {
             const evt = parseLine(line);
             evt.seed = true;
             this.emit('event', evt);
             count++;
+            processed++;
           } catch (e: any) {
             this.emit('error', e);
           }
         }
-        if (CONFIG.verbose && (final || count % 1000 === 0)) {
+        if (which === 'stdout') stdoutBuffer = buf; else stderrBuffer = buf;
+        if (CONFIG.verbose && (final || processed > 0)) {
           // eslint-disable-next-line no-console
-          console.log(`[SEED] emitted=${count} final=${final}`);
+          console.log(`[SEED-FLUSH ${which}] processed=${processed} total=${count} remainingBytes=${Buffer.byteLength(buf, 'utf8')} final=${final}`);
         }
       };
       seedProc.stdout.on('data', (chunk: Buffer) => {
         stdoutBuffer += chunk.toString('utf8');
-        flush(false);
+        flush('stdout', false);
       });
       seedProc.stderr.on('data', (chunk: Buffer) => {
-        const msg = chunk.toString('utf8').trim();
-        this.emit('notice', `docker seed stderr: ${msg}`);
-        if (CONFIG.verbose) {
-          // eslint-disable-next-line no-console
-          console.log(`[SEED-STDERR] ${msg}`);
-        }
+        stderrBuffer += chunk.toString('utf8');
+        flush('stderr', false);
       });
       seedProc.on('exit', (code) => {
-        flush(true);
+        flush('stdout', true);
+        flush('stderr', true);
         if (CONFIG.verbose) {
           // eslint-disable-next-line no-console
           console.log(`[SEED] exit code=${code} total=${count}`);
