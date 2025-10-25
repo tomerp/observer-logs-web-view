@@ -135,6 +135,10 @@ export function createServer() {
     ws.on('close', () => clearInterval(pingInterval));
   });
 
+  if (CONFIG.verbose) {
+    // eslint-disable-next-line no-console
+    console.log(`[BOOT] source=${CONFIG.source} container=${CONFIG.containerName} since=${CONFIG.dockerSince} sudo=${CONFIG.dockerUseSudo}`);
+  }
   follower.start();
 
   return { app, server };

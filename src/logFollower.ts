@@ -91,6 +91,15 @@ export class LogFollower extends (EventEmitter as { new(): EventEmitter }) {
         }, this.backoffMs);
       }
     });
+
+    cp.on('error', (err: Error) => {
+      const msg = `docker logs spawn error: ${err.message}`;
+      this.emit('notice', msg);
+      if (CONFIG.verbose) {
+        // eslint-disable-next-line no-console
+        console.log(`[ERROR] ${msg}`);
+      }
+    });
   }
 
   private async seedOnce(): Promise<void> {
