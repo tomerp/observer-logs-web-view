@@ -64,7 +64,7 @@ npm start   # you will be prompted for sudo password (seed + follow)
 cd ~/flare-systems-deployment/observer-logs-web-view
 export SOURCE=docker CONTAINER_NAME=ftso-v2-deployment-fdc-observer-1 \
        DOCKER_SINCE=24h DOCKER_USE_SUDO=1 LOG_TS_IS_UTC=1 \
-       TOKEN=<shared_token> PORT=43117 HOST=0.0.0.0 VERBOSE=1
+       TOKEN=abc PORT=43117 HOST=0.0.0.0 VERBOSE=1
 
 # Authenticate sudo once (you will type your password)
 sudo -v
