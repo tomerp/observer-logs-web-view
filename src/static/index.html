@@ -54,10 +54,27 @@
       let ws; let reconnectTimer; let token = localStorage.getItem('observer_token') || '';
       tokenInput.value = token;
 
+      function formatLocalLine(evt) {
+        try {
+          const ts = typeof evt.ts === 'number' ? evt.ts : Date.now();
+          const localTs = new Date(ts).toLocaleString();
+          const raw = String(evt.raw || '');
+          const idx = raw.indexOf('\t');
+          if (idx >= 0) {
+            // Replace the original log timestamp with a browser-local timestamp,
+            // but keep the rest of the line (level, module, message) unchanged.
+            return localTs + raw.slice(idx);
+          }
+          return localTs + ' ' + raw;
+        } catch {
+          return evt.raw;
+        }
+      }
+
       function appendLine(evt) {
         const div = document.createElement('div');
         div.className = evt.level;
-        div.textContent = evt.raw;
+        div.textContent = formatLocalLine(evt);
         log.appendChild(div);
         if (log.childElementCount > 10000) log.firstElementChild.remove();
         // Only autoscroll for live events, not for massive seed batches
