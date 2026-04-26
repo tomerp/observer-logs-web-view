@@ -126,27 +126,9 @@ export function createServer() {
     res.json(snap);
   });
 
-  function escapeHtml(s: string) {
-    return s
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  function formatEventForDisplay(evt: LogEvent) {
-    const ts = typeof evt.ts === 'number' ? evt.ts : Date.now();
-    const localTs = new Date(ts).toLocaleString();
-    const raw = String(evt.raw || '');
-    const idx = raw.indexOf('\t');
-    const line = idx >= 0 ? localTs + raw.slice(idx) : `${localTs} ${raw}`;
-    // Source lines often end with \n; with pre-wrap that renders as a blank row under each entry.
-    return line.replace(/\r?\n+$/g, '');
-  }
-
-  // Minimal server-rendered view: no WebSocket. HTML refresh every 5s + one line of JS to
-  // apply #log-end (meta refresh to a fixed #url stops after once when it matches the current
-  // page in many browsers).
+  // Minimal view: no WebSocket. Refreshes every 5s; a small script applies browser-local
+  // timestamps (same logic as the main UI) and #log-end (meta refresh to a fixed #url stops
+  // after once when it matches the current page in many browsers).
   // Same auth as /recent; optional ?limit= (default 500, capped at RECENT_LIMIT).
   app.get('/view-lite', authMiddleware, (req: Request, res: Response) => {
     const { limit: limitQ } = req.query as { limit?: string };
@@ -158,15 +140,10 @@ export function createServer() {
     );
     if (events.length > lim) events = events.slice(events.length - lim);
 
-    const levelClass = (l: string) =>
-      ['INFO', 'WARNING', 'ERROR', 'CRITICAL', 'UNKNOWN'].includes(l) ? l : 'UNKNOWN';
-
-    const bodyLines = events
-      .map((e) => {
-        const line = formatEventForDisplay(e);
-        return `<div class="${levelClass(e.level)}">${escapeHtml(line)}</div>`;
-      })
-      .join('');
+    const viewLiteData = {
+      lines: events.map((e) => ({ ts: e.ts, raw: e.raw, level: e.level })),
+    };
+    const viewLiteJson = JSON.stringify(viewLiteData).replace(/</g, '\\u003c');
 
     res.type('html').send(`<!doctype html>
 <html>
@@ -189,11 +166,36 @@ export function createServer() {
 </head>
 <body>
   <header>Observer Logs (lite) · auto-refresh 5s · ${events.length} lines (limit ${lim})</header>
-  <div id="log">
-${bodyLines}
-  </div>
+  <div id="log"></div>
   <div id="log-end"></div>
-  <script>location.replace(location.pathname+location.search+"#log-end");</script>
+  <script>window.__VIEW_LITE__=${viewLiteJson};</script>
+  <script>
+(function(){
+  function formatLocalLine(evt) {
+    try {
+      var ts = typeof evt.ts === 'number' ? evt.ts : Date.now();
+      var localTs = new Date(ts).toLocaleString();
+      var raw = String(evt.raw || '');
+      var idx = raw.indexOf('\\t');
+      if (idx >= 0) return (localTs + raw.slice(idx)).replace(/\\r?\\n+$/g, '');
+      return (localTs + ' ' + raw).replace(/\\r?\\n+$/g, '');
+    } catch (e) { return String(evt && evt.raw != null ? evt.raw : ''); }
+  }
+  var d = window.__VIEW_LITE__;
+  var list = d && d.lines;
+  if (!list || !list.length) return;
+  var log = document.getElementById('log');
+  for (var i = 0; i < list.length; i++) {
+    var e = list[i];
+    var div = document.createElement('div');
+    var lv = e.level;
+    div.className = ['INFO','WARNING','ERROR','CRITICAL','UNKNOWN'].indexOf(lv) >= 0 ? lv : 'UNKNOWN';
+    div.textContent = formatLocalLine(e);
+    log.appendChild(div);
+  }
+  location.replace(location.pathname + location.search + '#log-end');
+})();
+  </script>
 </body>
 </html>`);
   });

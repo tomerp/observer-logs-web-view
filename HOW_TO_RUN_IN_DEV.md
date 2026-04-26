@@ -35,6 +35,9 @@ export PORT=43117
 export HOST=127.0.0.1
 export VERBOSE=1
 export TOKEN=dev-token
+export LOG_TS_IS_UTC=1
+# If the first field in each line is **UTC** (e.g. docker-style logs, or forTestingAppendToLog.sh), add:
+# export LOG_TS_IS_UTC=1
 ```
 
 Avoid trailing `# ...` comments on the same line as `export` when copy-pasting: some clients drop the `#`, which turns the rest of the line into extra words and zsh will error with `export: not valid in this context: optional,`.
@@ -43,7 +46,17 @@ Notes:
 - **`LOG_FILE` must exist** at startup; the app will:
   - Seed from the last `TAIL_N` lines (env: `TAIL_N`, default 2000),
   - Then watch for new lines as they are appended.
-- File timestamps are interpreted as **local time** unless you set `LOG_TS_IS_UTC=1` and your parser expects UTC.
+
+#### Timestamps: `LOG_TS_IS_UTC` (read this if times look “wrong” in the UI)
+
+The parser turns the first tab-separated field on each line into an epoch. That field is either **local** or **UTC** depending on this env var:
+
+| Setting | Parser behavior | Typical use |
+|--------|------------------|-------------|
+| (unset) | First field = **local** wall time | Logs written in your machine’s local timezone **without** a `Z` / UTC designator |
+| `LOG_TS_IS_UTC=1` | First field = **UTC** | **Production** uses this with Docker/observer-style UTC timestamps. **`forTestingAppendToLog.sh` uses `date -u`**, so its lines are UTC: set this or the main UI will show misleading “local” times. |
+
+`HOW_TO_DEPLOY_IN_PROD.md` sets `LOG_TS_IS_UTC=1` for production. For a dev environment that matches that behavior, add `export LOG_TS_IS_UTC=1` to your shell (or the one-liner in §5) whenever you use the test script or any UTC-sourced file.
 
 ### 4) (Optional) Use the test log generator script
 
@@ -51,6 +64,7 @@ For quick local testing, there is a helper script that creates (if needed) and c
 
 - Script: `forTestingAppendToLog.sh`
 - Default log path: `./test-observer.log` in this repo
+- Timestamps are written with `date -u` (**UTC**). The server’s default is to treat the first field as **local** time unless you set `LOG_TS_IS_UTC=1` (see **Timestamps** above), so you almost always want that when using this script next to the dev server.
 
 Run it in one terminal:
 
@@ -85,10 +99,13 @@ This uses `nodemon` + `ts-node` to watch the `src` directory and restart on chan
 cd observer-logs-web-view
 
 export SOURCE=file LOG_FILE=$PWD/test-observer.log \
-       PORT=43117 HOST=127.0.0.1 VERBOSE=1 TOKEN=dev-token
+       PORT=43117 HOST=127.0.0.1 VERBOSE=1 TOKEN=dev-token \
+       LOG_TS_IS_UTC=1
 
 npm run dev
 ```
+
+(`LOG_TS_IS_UTC=1` matches production and the UTC timestamps from `forTestingAppendToLog.sh`. Omit it if your log file’s first column is already in **local** time.)
 
 #### Option B — build once, then `npm start`
 
@@ -98,7 +115,8 @@ This is closer to production (runs compiled JS from `dist/`), but without Docker
 cd observer-logs-web-view
 
 export SOURCE=file LOG_FILE=$PWD/test-observer.log \
-       PORT=43117 HOST=127.0.0.1 VERBOSE=1 TOKEN=dev-token
+       PORT=43117 HOST=127.0.0.1 VERBOSE=1 TOKEN=dev-token \
+       LOG_TS_IS_UTC=1
 
 npm run build
 npm start
@@ -117,6 +135,8 @@ You should see on the main UI:
 
 ### 7) Troubleshooting tips
 
+- **Timestamps in the main UI look like raw file time / not your local zone**
+  - The browser shows `toLocaleString()` for `evt.ts`. If `evt.ts` was parsed wrong, time will be wrong. For UTC first-column logs (incl. `forTestingAppendToLog.sh`), set **`LOG_TS_IS_UTC=1`**. See **Timestamps: `LOG_TS_IS_UTC`** in §3.
 - **No lines appearing**
   - Confirm `SOURCE=file` (e.g. `echo $SOURCE`) and that `LOG_FILE` exists and is being written to.
   - Check the terminal output for `[NOTICE]` or `[ERROR]` messages (use `VERBOSE=1`).

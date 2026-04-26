@@ -23,7 +23,7 @@ The service exposes a WebSocket and REST API. It seeds recent history once, then
   - Broadcasts `line` and periodic `stats` to all WS clients.
   - Token auth via `Authorization: Bearer <TOKEN>` or `?token=`.
   - Serves the main UI (WebSocket + token field) as static files at `/` from `src/static/`.
-  - Serves a **lite UI** at `GET /view-lite`: server-rendered HTML of recent lines from the same ring buffer as `/recent` (default 500 lines, override with `?limit=` up to `RECENT_LIMIT`). Refreshes every 5s via `meta` refresh; a one-line script applies `#log-end` so the viewport stays on the latest lines (no WebSocket). Intended for weak clients (e.g. old tablets) where the main UI is too heavy.
+  - Serves a **lite UI** at `GET /view-lite`: recent lines from the same ring buffer as `/recent` (default 500 lines, `?limit=` up to `RECENT_LIMIT`). The page embeds `ts`/`raw`/`level` in JSON and a small script formats each line with `new Date(ts).toLocaleString()` in the **browser** (same behavior as the main UI). Refreshes every 5s via `meta` refresh, then `#log-end` so the viewport stays on the latest lines. No WebSocket. Intended for weak clients (e.g. old tablets) where the main UI is too heavy.
   - REST endpoints: `/api/v1/*` plus short aliases `/health`, `/recent`, `/metrics`.
 
 ### Message formats
