@@ -34,10 +34,14 @@ npm start
 
 Open the browser: `http://<server-ip>:43117` and enter the token.
 
+**Lite UI (no WebSocket):** for devices that struggle with the main dashboard, open  
+`http://<server-ip>:43117/view-lite?token=<shared_token>` (same auth as `/recent`). The page shows the last 500 log lines by default and reloads every 5 seconds. Use `?limit=` to change the number of lines (capped at `RECENT_LIMIT`).
+
 Health and APIs:
 - `GET /health` → `{ ok: true }`
-- `GET /recent?limit=5000&since=<iso>` (token required)
-- `GET /metrics` (token required)
+- `GET /recent?limit=5000&since=<iso>` (token required if `TOKEN` is set)
+- `GET /metrics` (token required if `TOKEN` is set)
+- `GET /view-lite?limit=500&token=…` — server-rendered log snapshot; token via query or `Authorization` if `TOKEN` is set
 
 ### 3.1) Run without systemd (keeps running after logout)
 

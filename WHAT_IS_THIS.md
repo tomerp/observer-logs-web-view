@@ -6,6 +6,7 @@ Observer Logs Web View is a small Node.js/TypeScript service that streams the FT
 - Live tail in the browser via WebSocket
 - Rolling last‑60‑minutes counts for WARNING/ERROR/CRITICAL
 - Displays last processed round and seconds since last round
+- **Lite page** at `/view-lite`: server-rendered log snapshot, auto-refresh every 5s, no WebSocket (for weak clients)
 - Token-protected APIs (shared bearer token or `?token=` param)
 - Minimal UI included; React frontend can be added later using the same APIs
 
@@ -17,7 +18,8 @@ Observer Logs Web View is a small Node.js/TypeScript service that streams the FT
 - WebSocket: `/ws` (messages: `hello`, `line`, `stats`, `notice`)
 - REST: `/api/v1/recent`, `/api/v1/metrics`, `/api/v1/health`
 - Short aliases: `/recent`, `/metrics`, `/health`
-- Static UI: `/`
+- Static UI (main dashboard): `/`
+- **Lite UI:** `GET /view-lite` — HTML only; `?limit=` (default 500, max `RECENT_LIMIT`); same auth as `/recent` when `TOKEN` is set
 
 ### Configuration (env vars)
 - `PORT` (default: 43117)

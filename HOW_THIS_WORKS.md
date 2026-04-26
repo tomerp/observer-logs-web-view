@@ -22,7 +22,8 @@ The service exposes a WebSocket and REST API. It seeds recent history once, then
   - Express app with REST endpoints and a `ws` server.
   - Broadcasts `line` and periodic `stats` to all WS clients.
   - Token auth via `Authorization: Bearer <TOKEN>` or `?token=`.
-  - Serves the minimal UI at `/`.
+  - Serves the main UI (WebSocket + token field) as static files at `/` from `src/static/`.
+  - Serves a **lite UI** at `GET /view-lite`: server-rendered HTML of recent lines from the same ring buffer as `/recent` (default 500 lines, override with `?limit=` up to `RECENT_LIMIT`). Refreshes every 5s via `meta` refresh; a one-line script applies `#log-end` so the viewport stays on the latest lines (no WebSocket). Intended for weak clients (e.g. old tablets) where the main UI is too heavy.
   - REST endpoints: `/api/v1/*` plus short aliases `/health`, `/recent`, `/metrics`.
 
 ### Message formats
@@ -41,6 +42,6 @@ The service exposes a WebSocket and REST API. It seeds recent history once, then
 ### Extensibility
 - Add new analytics by updating `stats.ts` and sending extra fields in `StatsSnapshot`.
 - Add filters by extending the UI and optionally adding query params to `/recent`.
-- Replace the minimal UI with a React app consuming the same APIs.
+- Replace the minimal UI with a React app consuming the same APIs. The `/view-lite` page can stay as a fallback for clients that only need a periodic snapshot without WebSocket.
 
 

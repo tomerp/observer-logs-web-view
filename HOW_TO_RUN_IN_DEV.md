@@ -28,13 +28,16 @@ The server chooses between Docker logs and a plain file based on the `SOURCE` en
 For local development following a file, set at least:
 
 ```bash
+# LOG_FILE must exist. PORT defaults to 43117. Use HOST=0.0.0.0 for LAN. TOKEN can be empty.
 export SOURCE=file
-export LOG_FILE=/absolute/path/to/your.log   # the file to follow
-export PORT=43117                            # optional, default 43117
-export HOST=127.0.0.1                        # or 0.0.0.0 if you want LAN access
-export VERBOSE=1                             # optional, extra logging in the server
-export TOKEN=dev-token                       # optional but recommended; can be empty
+export LOG_FILE=test-observer.log
+export PORT=43117
+export HOST=127.0.0.1
+export VERBOSE=1
+export TOKEN=dev-token
 ```
+
+Avoid trailing `# ...` comments on the same line as `export` when copy-pasting: some clients drop the `#`, which turns the rest of the line into extra words and zsh will error with `export: not valid in this context: optional,`.
 
 Notes:
 - **`LOG_FILE` must exist** at startup; the app will:
@@ -105,10 +108,10 @@ npm start
 
 With the server running:
 
-- Open your browser to: `http://127.0.0.1:43117`
-- If you set `TOKEN`, enter it when prompted (or append `?token=dev-token` to the URL).
+- **Main UI:** `http://127.0.0.1:43117` — live tail via WebSocket, stats in the header, token field. If you set `TOKEN`, enter it when prompted (or append `?token=dev-token` to the URL).
+- **Lite UI:** `http://127.0.0.1:43117/view-lite?token=dev-token` (if using a token) — server-rendered page, no WebSocket; refreshes every 5s and shows the last 500 lines by default. Add `&limit=200` to show fewer lines on slow devices.
 
-You should see:
+You should see on the main UI:
 - The recent seed of log lines from the end of `LOG_FILE`,
 - New lines appearing in real time as your other process writes to the log.
 

@@ -126,6 +126,78 @@ export function createServer() {
     res.json(snap);
   });
 
+  function escapeHtml(s: string) {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatEventForDisplay(evt: LogEvent) {
+    const ts = typeof evt.ts === 'number' ? evt.ts : Date.now();
+    const localTs = new Date(ts).toLocaleString();
+    const raw = String(evt.raw || '');
+    const idx = raw.indexOf('\t');
+    const line = idx >= 0 ? localTs + raw.slice(idx) : `${localTs} ${raw}`;
+    // Source lines often end with \n; with pre-wrap that renders as a blank row under each entry.
+    return line.replace(/\r?\n+$/g, '');
+  }
+
+  // Minimal server-rendered view: no WebSocket. HTML refresh every 5s + one line of JS to
+  // apply #log-end (meta refresh to a fixed #url stops after once when it matches the current
+  // page in many browsers).
+  // Same auth as /recent; optional ?limit= (default 500, capped at RECENT_LIMIT).
+  app.get('/view-lite', authMiddleware, (req: Request, res: Response) => {
+    const { limit: limitQ } = req.query as { limit?: string };
+    let events = buffer.toArray();
+    const defaultLite = 500;
+    const lim = Math.min(
+      Math.max(1, Number(limitQ) || defaultLite),
+      CONFIG.recentLimit
+    );
+    if (events.length > lim) events = events.slice(events.length - lim);
+
+    const levelClass = (l: string) =>
+      ['INFO', 'WARNING', 'ERROR', 'CRITICAL', 'UNKNOWN'].includes(l) ? l : 'UNKNOWN';
+
+    const bodyLines = events
+      .map((e) => {
+        const line = formatEventForDisplay(e);
+        return `<div class="${levelClass(e.level)}">${escapeHtml(line)}</div>`;
+      })
+      .join('');
+
+    res.type('html').send(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="5" />
+  <title>Observer Logs (lite)</title>
+  <style>
+    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; margin: 0; background: #000; color: #ddd; }
+    header { padding: 8px 12px; background: #111; color: #eee; font-size: 14px; }
+    #log { padding: 8px 12px; }
+    #log > div { margin: 0; padding: 0; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
+    .INFO { color: #9aa7ff; }
+    .WARNING { color: #ffd666; }
+    .ERROR { color: #ff6b6b; }
+    .CRITICAL { color: #ff66a1; font-weight: bold; }
+    .UNKNOWN { color: #aaa; }
+  </style>
+</head>
+<body>
+  <header>Observer Logs (lite) · auto-refresh 5s · ${events.length} lines (limit ${lim})</header>
+  <div id="log">
+${bodyLines}
+  </div>
+  <div id="log-end"></div>
+  <script>location.replace(location.pathname+location.search+"#log-end");</script>
+</body>
+</html>`);
+  });
+
   // Debug endpoint
   app.get('/debug', authMiddleware, (_req: Request, res: Response) => {
     const events = buffer.toArray();
